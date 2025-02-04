@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bitcoin Arbitrage Bot</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { max-width: 800px; margin: auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); }
+        h1 { text-align: center; }
+        .chart-container { position: relative; height: 400px; }
+        .arbitrage { margin-top: 20px; }
+        .arbitrage h2 { margin-bottom: 10px; }
+        .opportunity { background: #e0ffe0; padding: 10px; margin: 5px 0; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Bitcoin Arbitrage Bot</h1>
+        <div class="chart-container">
+            <canvas id="priceChart"></canvas>
+        </div>
+        <div class="arbitrage">
+            <h2>Arbitrage Opportunities</h2>
+            <div id="opportunities"></div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData() {
+            const response = await fetch('/api/data');
+            const data = await response.json();
+            updateChart(data.prices);
+            updateOpportunities(data.opportunities);
+        }
+
+        function updateChart(prices) {
+            const labels = Object.keys(prices);
+            const datasets = [];
+
+            for (const coin of labels) {
+                const exchanges = Object.keys(prices[coin]);
+                const coinPrices = Object.values(prices[coin]);
+                datasets.push({
+                    label: coin,
+                    data: coinPrices,
+                    borderColor: getRandomColor(),
+                    fill: false
+                });
+            }
+
+            if (window.myChart) {
+                window.myChart.data.labels = Object.keys(prices.BTC);
+                window.myChart.data.datasets = datasets;
+                window.myChart.update();
+            } else {
+                const ctx = document.getElementById('priceChart').getContext('2d');
+                window.myChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(prices.BTC),
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: {
+                                beginAtZero: false
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function updateOpportunities(opportunities) {
+            const container = document.getElementById('opportunities');
+            container.innerHTML = '';
+            for (const coin in opportunities) {
+                opportunities[coin].forEach(op => {
+                    const div = document.createElement('div');
+                    div.className = 'opportunity';
+                    div.innerHTML = `${coin}: Buy from ${op.buy}, sell from ${op.sell}. Profit: $${op.profit} (%${op.percent_diff})`;
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        setInterval(fetchData, 5000);
+        fetchData();
+    </script>
+</body>
+</html>
